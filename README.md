@@ -1,1 +1,1 @@
-# snhu_smf_no_app_ug
+# snhu_smf_no_app_navigator_ug
