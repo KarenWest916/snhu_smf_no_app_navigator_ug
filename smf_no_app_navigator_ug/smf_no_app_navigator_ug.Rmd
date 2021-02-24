@@ -1,0 +1,106 @@
+---
+title: "smf_no_app"
+output: html_document
+---
+
+```{r load-libraries, include=FALSE}
+# setup
+library(DBI)
+library(odbc)
+library(tidyverse)
+library(gt)
+
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = 'center',
+  fig.width = 10,
+  fig.height = 6
+)
+```
+
+
+
+#database connection
+```{r connection-string,include=FALSE}
+#database connection
+con_data_reporting <- dbConnect(odbc::odbc(), .connection_string = "Driver={SQL Server Native Client 11.0};\n                          Server=COCE-DS-LSTNR,50222;\n                          Database=Data_Reporting;\n                          trusted_connection=yes;")
+```
+
+
+#import data from query -don't use this, I am working on a new query that pulls from the experiment table
+```{r}
+smf_no_app_df <- dbGetQuery(
+  conn = con_data_reporting, 
+  statement = read_file(
+    file = here::here("sql","smf_no_app_ug_results.sql")
+  )
+) %>% as_tibble()
+```
+
+
+#Aggregate test results to date
+```{r}
+smf_no_app_results <- 
+  smf_no_app_df %>% 
+  #filter(fafsa_completed==0) %>% 
+  group_by(test_group) %>% 
+  summarise(
+      InPopulation = n(), 
+       Apps = sum(application_count),
+       `App Rate` = sum(application_count)/n(),
+       AIPs = sum(application_in_progress_count),
+       `AIP Rate` = sum(application_in_progress_count)/n(),
+       Accepts = sum(accept_count),
+       `Accept Rate` = sum(accept_count) / n(),
+       Regs = sum(registration_count),
+      `Reg Rate` = sum(registration_count)/n()
+      #`Day 15 Starts` = sum(closed_won),
+      #`Day 15 Start Rate` = sum(closed_won)/n()
+  ) %>% 
+  rename(`Test Group` = test_group) %>% 
+ gt() %>%
+     fmt_percent(columns = vars(
+      `App Rate`,
+      `AIP Rate`,
+      `Accept Rate`,
+      `Reg Rate`,
+      #`Day 15 Start Rate`
+     ), decimals = 1) %>%
+     fmt_number(columns = vars(
+    InPopulation,
+    Apps,
+    AIPs,
+    Accepts,
+    Regs,
+    #`Day 15 Starts`
+     ), decimals = 0) %>%
+      data_color(columns = vars(`Apps`), colors = "lightblue") %>%
+   tab_header(
+    title = md("SMF No App Navigator (UG): Test vs. Control")) %>% 
+    tab_source_note(
+    source_note = c("Data Source:  Unify Opportunity - retrieved on 2/24/21"))
+  #%>%
+     #data_color(columns = vars(`Melt Rate`), colors = "lightgreen") %>%
+    #tab_options(
+      # column_labels.font.size = 13,
+      # table.font.size = 12
+    #)
+
+#Starts = registered, had course interaction, stage name in unify = Started
+#Day 15 Starts = for day 15 when opportunity is moved to "closed won"
+
+#would be interesting to see broken out based on day 15 start vs. whether they logged in or not, irrespective of which test group they were in
+
+smf_no_app_results
+  
+```
+
+
+
+
+```{r}
+# Overall results save
+smf_no_app_results %>% gtsave(filename = "smf_no_app_nav_ug_20210224.png", path = here::here("imgs"))
+```
