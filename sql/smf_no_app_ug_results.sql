@@ -16,6 +16,7 @@ SELECT
        Opp.ContactId AS contact_id,
        Opp.Id AS opportunity_id,
 	   t.Name AS term_name,
+	   o.CreatedDate AS opp_create_date,
 	   o.Academic_Level__c,
        o.StageName AS stage_name,
        o.Inquired_Date_Time__c AS inquired_date_time__c,
@@ -92,8 +93,11 @@ FROM UnifyStaging.dbo.Opportunity o
         ON Opp.Id = o.Id
            AND Opp.RN = 1
 		   AND o.Academic_Level__c = 'Undergraduate'
+
     left JOIN UnifyStaging.dbo.hed__Term__c t
         ON t.Id = o.Term__c
+
+		--WHERE o.Inquired_Date_Time__c > '2021-01-24'
 		
 --GROUP BY Opp.Name
 ORDER BY inquired_date_time__c
